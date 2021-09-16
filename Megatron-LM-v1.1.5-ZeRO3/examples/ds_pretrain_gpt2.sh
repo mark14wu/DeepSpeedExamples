@@ -1,9 +1,9 @@
-#! /bin/bash
+s#! /bin/bash
 
-GPUS_PER_NODE=8
+GPUS_PER_NODE=2
 # Change for multinode config
 MASTER_ADDR=localhost
-MASTER_PORT=6000
+MASTER_PORT=8886
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
@@ -11,25 +11,26 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 export DLWS_NUM_WORKER=${NNODES}
 export DLWS_NUM_GPU_PER_WORKER=${GPUS_PER_NODE}
 
-DATA_PATH=/data/megatron-data/indexed/my-gpt2_text_document
-VOCAB_PATH=/data/megatron-data/gpt2-vocab.json
-MERGE_PATH=/data/megatron-data/gpt2-merges.txt
-CHECKPOINT_PATH=checkpoints/gpt2_345m_ds
+DATA_PATH=/ssd1/wuhao35/gpt2/openwebtext_text_document
+VOCAB_PATH=/ssd1/wuhao35/gpt2/gpt2-vocab.json
+MERGE_PATH=/ssd1/wuhao35/gpt2/gpt2-merges.txt
+CHECKPOINT_PATH=ssd1/wuhao35/gpt2/checkpoints/gpt2_345m_ds
 
 script_path=$(realpath $0)
 script_dir=$(dirname $script_path)
-config_json="$script_dir/ds_zero_stage_2_config.json"
+config_json="$script_dir/ds_zero_stage_3_config.json"
 
 # Megatron Model Parallelism
-mp_size=4
+mp_size=1
 
 NLAYERS=24
 NHIDDEN=1024
-BATCHSIZE=9
+BATCHSIZE=1
+TRAIN_ITERS=10
 LOGDIR="tensorboard_data/${NLAYERS}l_${NHIDDEN}h_${NNODES}n_${GPUS_PER_NODE}g_${mp_size}mp_${BATCHSIZE}b_ds4"
 
 #ZeRO Configs
-stage=0
+stage=3
 reduce_scatter=true
 contigious_gradients=true
 rbs=50000000
@@ -52,8 +53,8 @@ gpt_options=" \
         --seq-length 1024 \
         --max-position-embeddings 1024 \
         --batch-size $BATCHSIZE \
-        --train-iters 320000 \
-        --lr-decay-iters 320000 \
+        --train-iters $TRAIN_ITERS \
+        --lr-decay-iters 20 \
         --save $CHECKPOINT_PATH \
         --load $CHECKPOINT_PATH \
         --data-path $DATA_PATH \
