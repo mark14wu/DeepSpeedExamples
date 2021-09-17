@@ -327,13 +327,17 @@ def train_step(forward_step_func, data_iterator,
 #    see_memory_usage(f'before forward {model.global_step}', force=True)
     # Forward model for one step.
     timers('forward').start()
+    torch.cuda.nvtx.range_push("forward")
     loss, loss_reduced = forward_step_func(data_iterator, model)
+    torch.cuda.nvtx.range_pop()
     timers('forward').stop()
 
  #   see_memory_usage(f'before backward {model.global_step}', force=True)
     # Calculate gradients, reduce across processes, and clip.
     timers('backward').start()
+    torch.cuda.nvtx.range_push("backward")
     backward_step(optimizer, model, loss)
+    torch.cuda.nvtx.range_pop()
     timers('backward').stop()
 
 
@@ -341,6 +345,7 @@ def train_step(forward_step_func, data_iterator,
     # Update parameters.
     skipped_iter = 0
     timers('optimizer').start()
+    torch.cuda.nvtx.range_push("optimizer")
     if args.deepspeed:
         model.step()
     else:
@@ -350,6 +355,7 @@ def train_step(forward_step_func, data_iterator,
             lr_scheduler.step()
         else:
             skipped_iter = 1
+    torch.cuda.nvtx.range_pop()
     timers('optimizer').stop()
 
     return loss_reduced, skipped_iter
